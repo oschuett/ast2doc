@@ -32,9 +32,6 @@ def main():
     # dump packages in JSON
     dump_packages_json(packages, out_dir)
 
-    # module/symbol usage statistics
-    statistics = usage_statistics(sym_lookup_table, packages)
-
     # document all modules public symbols
     modules_lists, modules_description, privates_referenced = document_all_modules(
                                         packages=packages,
@@ -54,57 +51,10 @@ def main():
                       packages=packages,
                       modules_lists=modules_lists,
                       modules_description=modules_description,
-                      statistics=statistics,
                       sym_lookup_table=sym_lookup_table)
 
     # Disambiguation page
     print_disambiguationPage(symbols_db, modules_description, out_dir)
-
-#=============================================================================
-def usage_statistics(sym_lookup_table, packages):
-
-    counter = {'__SYMBOLS__':{}, '__MODULES__':{}}
-    for module in sym_lookup_table:
-        symmap = sym_lookup_table[module]['symbols_map']
-        my_used_modules = set()
-        for sym, smap in symmap.iteritems():
-            ext_mod, ext_sym = smap.split(':',1)
-            if(ext_mod in ('__PRIV__', '__HERE__', '__EXTERNAL__')):
-                pass
-            elif(ext_mod=="__MULTI__"):
-                for item in eval(ext_sym):
-                    m = item.split(':')[0]
-                    my_used_modules.add(m)
-                    counter['__SYMBOLS__'].setdefault(item, 0)
-                    counter['__SYMBOLS__'][item] += 1
-            else:
-                if(match('__\w+__', ext_mod)): raise Exception('Unexpected EXT_MOD: "%s"' % ext_mod)
-                my_used_modules.add(ext_mod)
-                counter['__SYMBOLS__'].setdefault(smap, 0)
-                counter['__SYMBOLS__'][smap] += 1
-        for ext_mod in my_used_modules:
-            counter['__MODULES__'].setdefault(ext_mod, 0)
-            counter['__MODULES__'][ext_mod] += 1
-
-    statistics = {}
-    for key in ('__MODULES__', '__SYMBOLS__'):
-        statistics[key] = sorted([(k,v) for k,v in counter[key].iteritems() if v>1], key=lambda item: item[1])
-        statistics[key].reverse()
-
-    # statistics per package
-    pkgfiles = dict( (k, packages[k]['files']) for k in packages.keys() )
-    filepkg = {}
-    for k, flist in pkgfiles.iteritems():
-        filepkg.update( dict( (f[:-2].upper(), k) for f in flist ) )
-        statistics[k] = {'__MODULES__':[], '__SYMBOLS__':[]}
-    for k in ('__MODULES__', '__SYMBOLS__'):
-        for item in statistics[k]:
-            mod = item[0].split(':',1)[0] # this works in both k cases!
-            if not mod in utils.external_modules:
-                pkg = filepkg[mod]
-                statistics[pkg][k].append(item)
-
-    return statistics
 
 #=============================================================================
 def lookup_imported_symbols(ast_dir):

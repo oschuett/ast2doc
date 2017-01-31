@@ -188,13 +188,12 @@ def commit_banner_dump_indices(banner, indices, prefix):
         printout(body, prefix, title=title, output_file=index_id, jscript=["js/showhide.js", "js/setContentSize.js"], html_class="landing_page")
 
 #=============================================================================
-def print_overview(prefix, src_tree, packages, modules_lists, modules_description, statistics, sym_lookup_table):
+def print_overview(prefix, src_tree, packages, modules_lists, modules_description, sym_lookup_table):
 
     my_indices = IofIndices()
     # left flushed items
     my_indices.Append( 'Tree',          *print_logical_tree_index(src_tree, modules_lists, modules_description, prefix, packages, sym_lookup_table) )
     my_indices.Append( 'Index',         *print_alphabetic        (modules_lists['__ALL__'],           modules_description, prefix, 'all') )
-    my_indices.Append( 'Most used',     *print_mostly_used       (statistics,                         modules_description, prefix) )
     # right flushed items (last few buttons are swapped since they're right-flushed! if new items here: update accordingly styles.css [ul.navlist li:nth-last-child(XX)]!
     my_indices.Append( 'About',         *print_about_page(prefix) )
     my_indices.Append( 'Custom search', *print_gcse_page(prefix) )
@@ -209,12 +208,12 @@ def print_overview(prefix, src_tree, packages, modules_lists, modules_descriptio
     return my_indices.l2sort[initial_index]+".html"
 
 #=============================================================================
-def print_landingPage(prefix, src_tree, packages, modules_lists, modules_description, statistics, sym_lookup_table):
+def print_landingPage(prefix, src_tree, packages, modules_lists, modules_description, sym_lookup_table):
 
     allModulesFile  = print_allModules(prefix, modules_lists['__ALL__'], modules_description)
     pkgModulesFiles = print_packageFrame(prefix, modules_lists, modules_description, packages)
     packageListFile = print_packageListFrame(prefix, allModulesFile, src_tree, packages)
-    overviewFile    = print_overview(prefix, src_tree, packages, modules_lists, modules_description, statistics, sym_lookup_table)
+    overviewFile    = print_overview(prefix, src_tree, packages, modules_lists, modules_description, sym_lookup_table)
 
     title = 'CP2K API Documentation'
 
@@ -283,87 +282,6 @@ def print_about_page(prefix):
 
     fileBaseName = 'about'
     body = newTag('div', content=body_parts)
-    return fileBaseName+'.html', title, body
-
-#=============================================================================
-def get_mostly_used(statistics, modules_description, top_howmany, title_prefix):
-
-    hlevel = 'h4'
-    myTop10 = top_howmany
-    my_ranking = {'__MODULES__':statistics.pop('__MODULES__')[:myTop10], '__SYMBOLS__':statistics.pop('__SYMBOLS__')[:myTop10]}
-    if all( [len(my_ranking[k])==0 for k in '__MODULES__', '__SYMBOLS__'] ):
-        return
-
-    # mostly used modules
-    k = '__MODULES__'
-    span = newTag('span', content=title_prefix, attributes={"class":'pkgname'})
-    head = newTag(hlevel, content="modules:", newlines=False)
-    rows = [
-        newTag('tr', content=newTag('th', content='&nbsp;', attributes={"colspan":"2"})),
-        newTag('tr', content=newTag('th', content=head, attributes={"colspan":"2", "style":"float: left;"}))
-    ]
-    first = True
-    for what, nhits in my_ranking[k]:
-        mod = what.lower()
-        descr = modules_description[mod] if mod in modules_description else "[external module]"
-        link = newTag('a', content=mod, attributes={"href":filename(mod), "target":'moduleFrame', "title":descr})
-        hits = "hits: " if first else ""
-        hits += str(nhits) 
-        first = False
-        data = [newTag('td', content=content) for content in link, hits]
-        rows.append( newTag('tr', content=data, attributes={"class":'alternating'}) )
-    m_table = newTag('table', content=rows, attributes={"class":'ranking'})
-
-    # mostly used symbols
-    k = '__SYMBOLS__'
-    head = newTag(hlevel, content="symbols:")
-    rows = [
-        newTag('tr', content=newTag('th', content='&nbsp;', attributes={"colspan":"2"})),
-        newTag('tr', content=newTag('th', content=head, attributes={"colspan":"2", "style":"float: left;"}))
-    ]
-    first = True
-    for what, nhits in my_ranking[k]:
-        mod, sym = what.lower().split(':')
-        descr = modules_description[mod] if mod in modules_description else "[external module]"
-        mod_link = newTag('a', content=mod, attributes={"href":filename(mod), "target":'moduleFrame', "title":descr})
-        sym_link = newTag('a', content=sym, attributes={"href":filename(mod, hashtag=sym), "target":'moduleFrame'})
-        links = [mod_link, separator, sym_link]
-        hits = "hits: " if first else ""
-        hits += str(nhits) 
-        first = False
-        data = [newTag('td', content=content) for content in links, hits]
-        rows.append( newTag('tr', content=data, attributes={"class":'alternating'}) )
-    s_table = newTag('table', content=rows, attributes={"class":'ranking'})
-
-    hlevel = 'h3'
-    data = [ newTag('td', content=item) for item in newTag(hlevel, content=span), m_table, s_table ]
-    outer_row = newTag('tr', content=data, attributes={"class":"mostly_used_table_row"})
-
-    return(outer_row)
-
-#=============================================================================
-def print_mostly_used(statistics, modules_description, prefix):
-
-    head0 = newTag('h3', content="Overall statistics:")
-    row0 = newTag('tr', content=newTag('th', content=head0, attributes={"colspan":"3", "style":"float: left;"}))
-    row = get_mostly_used(statistics, modules_description, top_howmany=20, title_prefix="")
-    rows = [row0, row]
-
-    head1 = newTag('h3', content="Per-package statistics:")
-    row1 = newTag('tr', content=newTag('th', content=head1, attributes={"colspan":"3", "style":"float: left;"}))
-    rows.append(row1)
-    for pkg in sorted(statistics.keys()):
-        title_prefix="[root]" if pkg=="." else pkg
-        row = get_mostly_used(statistics[pkg], modules_description, top_howmany=5, title_prefix=title_prefix)
-        if row:
-            rows.append(row)
-
-    table = newTag('table', content=rows, attributes={"class":"mostly_used_table"})
-
-    title = "Most used modules/symbols statistics"
-    heading = newTag('h2', content=title, attributes={"class":'index_title'})
-    fileBaseName = 'mostly_used'
-    body = newTag('div', content=[heading, table])
     return fileBaseName+'.html', title, body
 
 #=============================================================================
