@@ -63,7 +63,7 @@ def print_packageOverview(prefix, pkgname, encoded_pkgname, descr, modules_list,
 
 #=============================================================================
 def print_packageFrame(prefix, modules_lists, modules_description, packages):
-    my_packages = [item for item in modules_lists.keys() if not item in ('__ALL__', '__API__')]
+    my_packages = [item for item in modules_lists.keys() if not item in ('__ALL__')]
 
     files = []
     for pkg in sorted(my_packages):
@@ -188,14 +188,13 @@ def commit_banner_dump_indices(banner, indices, prefix):
         printout(body, prefix, title=title, output_file=index_id, jscript=["js/showhide.js", "js/setContentSize.js"], html_class="landing_page")
 
 #=============================================================================
-def print_overview(prefix, src_tree, packages, modules_lists, modules_description, statistics, api, sym_lookup_table):
+def print_overview(prefix, src_tree, packages, modules_lists, modules_description, statistics, sym_lookup_table):
 
     my_indices = IofIndices()
-    # left flushed items  ---  TODO: another item: alphabetic index of DBCSR API symbols? shortcut to dbcsr_api.html?
-    my_indices.Append( 'Tree',          *print_logical_tree_index('__ALL__', src_tree, modules_lists, modules_description, prefix, packages, sym_lookup_table) )
+    # left flushed items
+    my_indices.Append( 'Tree',          *print_logical_tree_index(src_tree, modules_lists, modules_description, prefix, packages, sym_lookup_table) )
     my_indices.Append( 'Index',         *print_alphabetic        (modules_lists['__ALL__'],           modules_description, prefix, 'all') )
     my_indices.Append( 'Most used',     *print_mostly_used       (statistics,                         modules_description, prefix) )
-    my_indices.Append( 'DBCSR modules', *print_alphabetic        (modules_lists['__API__'],           modules_description, prefix, 'DBCSR API') )
     # right flushed items (last few buttons are swapped since they're right-flushed! if new items here: update accordingly styles.css [ul.navlist li:nth-last-child(XX)]!
     my_indices.Append( 'About',         *print_about_page(prefix) )
     my_indices.Append( 'Custom search', *print_gcse_page(prefix) )
@@ -210,12 +209,12 @@ def print_overview(prefix, src_tree, packages, modules_lists, modules_descriptio
     return my_indices.l2sort[initial_index]+".html"
 
 #=============================================================================
-def print_landingPage(prefix, src_tree, packages, modules_lists, modules_description, statistics, api, sym_lookup_table):
+def print_landingPage(prefix, src_tree, packages, modules_lists, modules_description, statistics, sym_lookup_table):
 
     allModulesFile  = print_allModules(prefix, modules_lists['__ALL__'], modules_description)
     pkgModulesFiles = print_packageFrame(prefix, modules_lists, modules_description, packages)
     packageListFile = print_packageListFrame(prefix, allModulesFile, src_tree, packages)
-    overviewFile    = print_overview(prefix, src_tree, packages, modules_lists, modules_description, statistics, api, sym_lookup_table)
+    overviewFile    = print_overview(prefix, src_tree, packages, modules_lists, modules_description, statistics, sym_lookup_table)
 
     title = 'CP2K API Documentation'
 
@@ -388,33 +387,26 @@ def get_package_stuff(modules_lists, modules_description, packages, pkg_path='__
     return [node_button, ' &#8212; ', description, modules_container]
 
 #=============================================================================
-def print_logical_tree_index(api, src_tree, modules_lists, modules_description, prefix, packages, sym_lookup_table=None, fmt='html'):
+def print_logical_tree_index(src_tree, modules_lists, modules_description, prefix, packages, sym_lookup_table=None):
 
-    if api == '__ALL__':
-        title = 'Logical tree of ALL packages'
-    else:
-        title = 'Logical tree index of DBCSR API symbols'
+    title = 'Logical tree of ALL packages'
 
-    if(fmt=='html'):
-        heading = newTag('h2', content=title, attributes={"class":'index_title'})
+    heading = newTag('h2', content=title, attributes={"class":'index_title'})
 
-        root_item = newTag('li', content=get_package_stuff(modules_lists, modules_description, packages))
+    root_item = newTag('li', content=get_package_stuff(modules_lists, modules_description, packages))
 
-        branches = get_tree(api, src_tree, modules_lists, modules_description, packages, sym_lookup_table)
-        assert(branches)
-        root_item.addPiece(branches)
+    branches = get_tree(src_tree, modules_lists, modules_description, packages, sym_lookup_table)
+    assert(branches)
+    root_item.addPiece(branches)
 
-        fileBaseName = "tree_index" if api == '__ALL__' else "API_tree_index"
-        outer_list = newTag('ul', content=root_item, attributes={"class":'nobullet'})
-        body = newTag('div', content=[heading, outer_list])
-
-    else:
-        assert(False) # Unknown format
+    fileBaseName = "tree_index"
+    outer_list = newTag('ul', content=root_item, attributes={"class":'nobullet'})
+    body = newTag('div', content=[heading, outer_list])
 
     return fileBaseName+".html", title, body
 
 #=============================================================================
-def get_tree(api, tree, modules_lists, modules_description, packages, sym_lookup_table, rootnode=None):
+def get_tree(tree, modules_lists, modules_description, packages, sym_lookup_table, rootnode=None):
 
     children = sorted(tree.GetChildren(rootnode))
 
@@ -430,26 +422,21 @@ def get_tree(api, tree, modules_lists, modules_description, packages, sym_lookup
         my_modules_map = {}
         for f in files:
             mod_name = f.rsplit(".", 1)[0].upper()
-            if api == '__ALL__':
-                if mod_name in sym_lookup_table:
-                    my_mmap = {}
-                    for k, v in sym_lookup_table[mod_name]['symbols_map'].iteritems():
-                        ext_module, external_sym_name = v.split(':',1)
-                        if(ext_module == '__HERE__'): # no forwarded symbols here...
-                            assert(k == external_sym_name)
-                            my_mmap[k] = k
-                    if(my_mmap):
-                        my_modules_map[mod_name.lower()] = my_mmap
-
-            # use the API forwarded symbols as a list of things to list
-            elif mod_name in api['modules_map']:
-                my_modules_map[mod_name.lower()] = api['modules_map'][mod_name]
+            if mod_name in sym_lookup_table:
+                my_mmap = {}
+                for k, v in sym_lookup_table[mod_name]['symbols_map'].iteritems():
+                    ext_module, external_sym_name = v.split(':',1)
+                    if(ext_module == '__HERE__'): # no forwarded symbols here...
+                        assert(k == external_sym_name)
+                        my_mmap[k] = k
+                if(my_mmap):
+                    my_modules_map[mod_name.lower()] = my_mmap
 
         if(my_modules_map):
             children_item = newTag('li', content=get_package_stuff(modules_lists, modules_description, packages, child))
 
             # recurse ...
-            branches = get_tree(api, tree, modules_lists, modules_description, packages, sym_lookup_table, rootnode=child)
+            branches = get_tree(tree, modules_lists, modules_description, packages, sym_lookup_table, rootnode=child)
             if branches:
                 children_item.addPiece(branches)
 
