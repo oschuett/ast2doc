@@ -193,7 +193,7 @@ def print_overview(prefix, src_tree, packages, modules_lists, modules_descriptio
     my_indices = IofIndices()
     # left flushed items
     my_indices.Append( 'Tree',          *print_logical_tree_index(src_tree, modules_lists, modules_description, prefix, packages, sym_lookup_table) )
-    my_indices.Append( 'Index',         *print_alphabetic        (modules_lists['__ALL__'],           modules_description, prefix, 'all') )
+    my_indices.Append( 'Index',         *print_alphabetic(modules_lists['__ALL__'],           modules_description, prefix, 'all') )
     # right flushed items (last few buttons are swapped since they're right-flushed! if new items here: update accordingly styles.css [ul.navlist li:nth-last-child(XX)]!
     my_indices.Append( 'About',         *print_about_page(prefix) )
     my_indices.Append( 'Custom search', *print_gcse_page(prefix) )
@@ -269,7 +269,7 @@ def print_about_page(prefix):
     link = newTag('a', content="", attributes={"class":"external_href my_tools", "href":href, "target":'_blank', "rel":'nofollow'})
     fparse = newTag('li', content=["fparse", link])
     # ast2doc
-    href = "https://github.com/scaravat/ast2doc"
+    href = "https://github.com/oschuett/ast2doc"
     link = newTag('a', content="", attributes={"class":"external_href my_tools", "href":href, "target":'_blank', "rel":'nofollow'})
     ast2doc = newTag('li', content=["ast2doc", link])
     l = newTag('ul', content=[fparse, ast2doc])
